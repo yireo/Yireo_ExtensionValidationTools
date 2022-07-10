@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="extension:validate_version_match" xsi:type="object">Yireo\ExtensionValidationTools\Console\Command\VersionMatchCommand</item>
+                <item name="extension:validate_generate_unit_test" xsi:type="object">Yireo\ExtensionValidationTools\Console\Command\GenerateUnitTestCommand</item>
+                <item name="extension:validate_run_phpcs" xsi:type="object">Yireo\ExtensionValidationTools\Console\Command\RunCodingStandardCommand</item>
+                <item name="extension:validate_run_phpstan" xsi:type="object">Yireo\ExtensionValidationTools\Console\Command\RunPhpStanCommand</item>
+                <item name="extension:validate_run_unit_test" xsi:type="object">Yireo\ExtensionValidationTools\Console\Command\RunUnitTestCommand</item>
+            </argument>
+        </arguments>
+    </type>
+
+    <type name="Yireo\ExtensionValidationTools\Console\Command\RunPhpStanCommand">
+        <arguments>
+            <argument name="directoryList" xsi:type="object">\Magento\Framework\Filesystem\DirectoryList\Proxy</argument>
+        </arguments>
+    </type>
+</config>
