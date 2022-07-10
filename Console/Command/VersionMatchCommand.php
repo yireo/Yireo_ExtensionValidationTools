@@ -4,7 +4,7 @@
  *
  * @package     Yireo_ExtensionValidationTools
  * @author      Yireo (https://www.yireo.com/)
- * @copyright   Copyright 2018 Yireo (https://www.yireo.com/)
+ * @copyright   Copyright 2022 Yireo (https://www.yireo.com/)
  * @license     Open Source License (OSL v3)
  */
 
@@ -16,15 +16,10 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use Symfony\Component\Console\Input\InputOption;
-use Yireo\ExtensionValidationTools\Scan\Composer;
+use Yireo\ExtensionChecker\Scan\Composer;
 
 class VersionMatchCommand extends Command
 {
-    /**
-     * @var VersionParser
-     */
-    private $versionParser;
-
     /**
      * @var Composer
      */
@@ -32,17 +27,14 @@ class VersionMatchCommand extends Command
 
     /**
      * VersionMatchCommand constructor.
-     * @param VersionParser $versionParser
      * @param Composer $composer
      * @param string|null $name
      */
     public function __construct(
-        VersionParser $versionParser,
         Composer $composer,
         string $name = null
     ) {
         parent::__construct($name);
-        $this->versionParser = $versionParser;
         $this->composer = $composer;
     }
 
@@ -51,7 +43,7 @@ class VersionMatchCommand extends Command
      */
     protected function configure()
     {
-        $this->setName('extension:validate:version_match');
+        $this->setName('yireo_extension_validate:version_match');
         $this->setDescription('See if given composer.json would be installable in current Magento instance');
 
         $this->addArgument(
@@ -64,15 +56,16 @@ class VersionMatchCommand extends Command
     /**
      * @param Input $input
      * @param Output $output
+     * @return int
      */
-    protected function execute(Input $input, Output $output)
+    protected function execute(Input $input, Output $output): int
     {
         $composerFile = (string)$input->getArgument('composer_file');
         try {
             $composerRequirements = $this->composer->getRequirementsFromFile($composerFile);
         } catch (Exception $e) {
             $output->writeln('ERROR: ' . $e->getMessage());
-            return;
+            return 1;
         }
 
         $installedPackages = $this->composer->getInstalledPackages();

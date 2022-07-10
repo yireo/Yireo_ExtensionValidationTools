@@ -4,7 +4,7 @@
  *
  * @package     Yireo_ExtensionValidationTools
  * @author      Yireo (https://www.yireo.com/)
- * @copyright   Copyright 2018 Yireo (https://www.yireo.com/)
+ * @copyright   Copyright 2022 Yireo (https://www.yireo.com/)
  * @license     Open Source License (OSL v3)
  */
 
@@ -47,7 +47,7 @@ class RunCodingStandardCommand extends Command
     
     protected function configure()
     {
-        $this->setName('extension:validate:phpcs');
+        $this->setName('yireo_extension_validate:phpcs');
         $this->setDescription('Run PHPCS for a specific Magento module');
         $this->addArgument('module', InputArgument::REQUIRED, 'Module name');
         $this->addArgument('severity', InputArgument::OPTIONAL, 'PHPCS severity (default 7)', 7);

@@ -4,24 +4,18 @@
  *
  * @package     Yireo_ExtensionValidationTools
  * @author      Yireo (https://www.yireo.com/)
- * @copyright   Copyright 2018 Yireo (https://www.yireo.com/)
+ * @copyright   Copyright 2022 Yireo (https://www.yireo.com/)
  * @license     Open Source License (OSL v3)
  */
 
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
-use Exception;
-use InvalidArgumentException;
-use Magento\Framework\App\ObjectManager;
 use Magento\Framework\Component\ComponentRegistrar;
 use Magento\Framework\Shell;
-use ReflectionException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
-use Symfony\Component\Console\Input\InputOption;
-use Yireo\ExtensionValidationTools\Scan\Scan;
 
 class RunUnitTestCommand extends Command
 {
@@ -51,7 +45,7 @@ class RunUnitTestCommand extends Command
 
     protected function configure()
     {
-        $this->setName('extension:validate:unit');
+        $this->setName('yireo_extension_validate:unit');
         $this->setDescription('Run PHPUnit unit tests for a specific Magento module');
         $this->addArgument('module', InputArgument::REQUIRED, 'Module name');
     }

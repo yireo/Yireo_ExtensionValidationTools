@@ -4,7 +4,7 @@
  *
  * @package     Yireo_ExtensionValidationTools
  * @author      Yireo (https://www.yireo.com/)
- * @copyright   Copyright 2018 Yireo (https://www.yireo.com/)
+ * @copyright   Copyright 2022 Yireo (https://www.yireo.com/)
  * @license     Open Source License (OSL v3)
  */
 
@@ -55,7 +55,7 @@ class RunPhpStanCommand extends Command
 
     protected function configure()
     {
-        $this->setName('extension:validate:phpstan');
+        $this->setName('yireo_extension_validate:phpstan');
         $this->setDescription('Run PHPStan for a specific Magento module');
         $this->addArgument('module', InputArgument::REQUIRED, 'Module name');
         $this->addArgument('level', InputArgument::OPTIONAL, 'PHPStan level (default 2)', 2);
@@ -91,6 +91,5 @@ parameters:
 
 HEREDOC
         );
-
     }
 }

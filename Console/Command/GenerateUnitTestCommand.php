@@ -4,14 +4,13 @@
  *
  * @package     Yireo_ExtensionValidationTools
  * @author      Yireo (https://www.yireo.com/)
- * @copyright   Copyright 2018 Yireo (https://www.yireo.com/)
+ * @copyright   Copyright 2022 Yireo (https://www.yireo.com/)
  * @license     Open Source License (OSL v3)
  */
 
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use Magento\Framework\Component\ComponentRegistrar;
-use Magento\Framework\Filesystem\DriverInterface;
 use Magento\Framework\Filesystem\DriverPool;
 use Magento\Framework\Filesystem\File\WriteFactory;
 use Magento\Framework\ObjectManagerInterface;
@@ -62,7 +61,7 @@ class GenerateUnitTestCommand extends Command
 
     protected function configure()
     {
-        $this->setName('extension:validate:generate-unit-test');
+        $this->setName('yireo_extension_validate:generate-unit-test');
         $this->setDescription('Generate a PHPUnit unit test');
 
         $this->addOption(
