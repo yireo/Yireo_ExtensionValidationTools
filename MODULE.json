@@ -4,5 +4,6 @@
     "sequence": [
         "Yireo_ExtensionChecker"
     ],
-    "phpstan_level": "5"
+    "phpstan_level": "5",
+    "phpcs_severity": "9"
 }
