@@ -36,7 +36,7 @@ class RunUnitTestCommand extends Command
     public function __construct(
         ComponentRegistrar $componentRegistrar,
         Shell $shell,
-        string $name = null
+        ?string $name = null
     ) {
         parent::__construct($name);
         $this->componentRegistrar = $componentRegistrar;
@@ -53,15 +53,15 @@ class RunUnitTestCommand extends Command
     /**
      * @param Input $input
      * @param Output $output
-     * @return int|void
+     * @return int
      */
-    protected function execute(Input $input, Output $output)
+    protected function execute(Input $input, Output $output): int
     {
         $moduleName = $input->getArgument('module');
         $modulePath = $this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
 
         if (is_dir($modulePath . '/Test/Unit')) {
-            $this->shell->execute($_SERVER['_'] . ' ./vendor/bin/phpunit --colors=always ' . $modulePath . '/Test/Unit/');
+            $this->shell->execute(PHP_BINARY . ' ./vendor/bin/phpunit --colors=always ' . $modulePath . '/Test/Unit/');
             return 1;
         }
 

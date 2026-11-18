@@ -38,7 +38,7 @@ class RunCodingStandardCommand extends Command
     public function __construct(
         ComponentRegistrar $componentRegistrar,
         Shell $shell,
-        string $name = null
+        ?string $name = null
     ) {
         parent::__construct($name);
         $this->componentRegistrar = $componentRegistrar;
@@ -56,9 +56,9 @@ class RunCodingStandardCommand extends Command
     /**
      * @param Input $input
      * @param Output $output
-     * @return int|void
+     * @return int
      */
-    protected function execute(Input $input, Output $output)
+    protected function execute(Input $input, Output $output): int
     {
         $moduleName = $input->getArgument('module');
         $severity = $input->getArgument('severity');

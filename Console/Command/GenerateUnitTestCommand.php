@@ -16,7 +16,6 @@ use Magento\Framework\Filesystem\File\WriteFactory;
 use Magento\Framework\ObjectManagerInterface;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\PhpNamespace;
-use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use ReflectionException;
 use Symfony\Component\Console\Command\Command;
@@ -26,6 +25,8 @@ use Symfony\Component\Console\Input\InputOption;
 
 class GenerateUnitTestCommand extends Command
 {
+    private const TEST_CASE_CLASS = 'PHPUnit\\Framework\\TestCase';
+
     /**
      * @var ObjectManagerInterface
      */
@@ -51,7 +52,7 @@ class GenerateUnitTestCommand extends Command
         ObjectManagerInterface $objectManager,
         ComponentRegistrar $componentRegistrar,
         WriteFactory $writeFactory,
-        string $name = null
+        ?string $name = null
     ) {
         parent::__construct($name);
         $this->objectManager = $objectManager;
@@ -80,9 +81,9 @@ class GenerateUnitTestCommand extends Command
     /**
      * @param Input $input
      * @param Output $output
-     * @return int|void
+     * @return int
      */
-    protected function execute(Input $input, Output $output)
+    protected function execute(Input $input, Output $output): int
     {
         $moduleName = $input->getOption('module');
         $modulePath = $this->componentRegistrar->getPath('module', $moduleName);
@@ -95,7 +96,7 @@ class GenerateUnitTestCommand extends Command
         $phpUnitTestFile = $this->getPhpUnitTestFile($modulePath, $targetObject);
         if (file_exists($phpUnitTestFile)) {
             $output->writeln('Unit test already exists');
-            return;
+            return 0;
         }
 
         $phpUnitTestCode = $this->getPhpUnitTestCode($targetObject);
@@ -103,6 +104,7 @@ class GenerateUnitTestCommand extends Command
         $fileWrite->write($phpUnitTestCode);
 
         $output->writeln('Unit test generated: ' . $phpUnitTestFile);
+        return 0;
     }
 
     /**
@@ -138,7 +140,7 @@ class GenerateUnitTestCommand extends Command
         $className = $reflectionObject->getShortName() . 'Test';
 
         $class = new ClassType($className);
-        $class->setExtends(TestCase::class);
+        $class->setExtends(self::TEST_CASE_CLASS);
 
         foreach ($targetMethods as $targetMethod) {
             if ($targetMethod === '__construct') {
@@ -158,7 +160,7 @@ class GenerateUnitTestCommand extends Command
                 ->setBody(implode("\n", $bodyLines));
         }
 
-        $namespace->addUse(TestCase::class);
+        $namespace->addUse(self::TEST_CASE_CLASS);
         $namespace->addUse($targetClass);
         $namespace->add($class);
 

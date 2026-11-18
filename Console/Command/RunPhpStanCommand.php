@@ -45,7 +45,7 @@ class RunPhpStanCommand extends Command
         ComponentRegistrar $componentRegistrar,
         DirectoryList $directoryList,
         Shell $shell,
-        string $name = null
+        ?string $name = null
     ) {
         parent::__construct($name);
         $this->componentRegistrar = $componentRegistrar;
@@ -64,9 +64,9 @@ class RunPhpStanCommand extends Command
     /**
      * @param Input $input
      * @param Output $output
-     * @return int|void
+     * @return int
      */
-    protected function execute(Input $input, Output $output)
+    protected function execute(Input $input, Output $output): int
     {
         $moduleName = $input->getArgument('module');
         $level = $input->getArgument('level');

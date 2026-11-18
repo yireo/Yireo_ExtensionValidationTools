@@ -4,8 +4,11 @@
   "description": "N/A",
   "type": "magento2-module",
   "require": {
-    "magento/framework": "*",
-    "yireo/magento2-extensionchecker": "*"
+    "ext-pcre": "*",
+    "composer/semver": "^3.0",
+    "magento/framework": "^103.0",
+    "nette/php-generator": "^3.6 || ^4.0",
+    "yireo/magento2-extensionchecker": "^2.0"
   },
   "license": [
     "OSL-3.0"

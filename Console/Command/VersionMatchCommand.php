@@ -16,26 +16,28 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use Symfony\Component\Console\Input\InputOption;
-use Yireo\ExtensionChecker\Scan\Composer;
+use Yireo\ExtensionChecker\Composer\ComposerFileFactory;
+use Yireo\ExtensionChecker\Composer\ComposerProvider;
 
 class VersionMatchCommand extends Command
 {
-    /**
-     * @var Composer
-     */
-    private $composer;
+    private ComposerFileFactory $composerFileFactory;
+    private ComposerProvider $composerProvider;
 
     /**
      * VersionMatchCommand constructor.
-     * @param Composer $composer
+     * @param ComposerFileFactory $composerFileFactory
+     * @param ComposerProvider $composerProvider
      * @param string|null $name
      */
     public function __construct(
-        Composer $composer,
-        string $name = null
+        ComposerFileFactory $composerFileFactory,
+        ComposerProvider $composerProvider,
+        ?string $name = null
     ) {
         parent::__construct($name);
-        $this->composer = $composer;
+        $this->composerFileFactory = $composerFileFactory;
+        $this->composerProvider = $composerProvider;
     }
 
     /**
@@ -62,13 +64,13 @@ class VersionMatchCommand extends Command
     {
         $composerFile = (string)$input->getArgument('composer_file');
         try {
-            $composerRequirements = $this->composer->getRequirementsFromFile($composerFile);
+            $composerRequirements = $this->composerFileFactory->create($composerFile)->get('require');
         } catch (Exception $e) {
             $output->writeln('ERROR: ' . $e->getMessage());
             return 1;
         }
 
-        $installedPackages = $this->composer->getInstalledPackages();
+        $installedPackages = $this->composerProvider->getComposerPackages();
         foreach ($composerRequirements as $composerRequirement => $composerRequiredVersion) {
             if (preg_match('/^ext-/', $composerRequirement) || $composerRequirement === 'php') {
                 continue;
