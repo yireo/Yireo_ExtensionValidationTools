@@ -3,5 +3,6 @@
     "composer_name": "yireo/magento2-extension-validation-tools",
     "sequence": [
         "Yireo_ExtensionChecker"
-    ]
+    ],
+    "phpstan_level": "5"
 }
