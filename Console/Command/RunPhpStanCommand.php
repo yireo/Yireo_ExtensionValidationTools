@@ -11,28 +11,28 @@
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use InvalidArgumentException;
-use Magento\Framework\Component\ComponentRegistrar;
 use Magento\Framework\Filesystem\DirectoryList;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
+use Yireo\ExtensionValidationTools\Console\ModuleResolver;
 use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunPhpStanCommand extends Command
 {
-    private ComponentRegistrar $componentRegistrar;
+    private ModuleResolver $moduleResolver;
     private DirectoryList $directoryList;
     private ToolRunner $toolRunner;
 
     public function __construct(
-        ComponentRegistrar $componentRegistrar,
+        ModuleResolver $moduleResolver,
         DirectoryList $directoryList,
         ToolRunner $toolRunner,
         ?string $name = null
     ) {
         parent::__construct($name);
-        $this->componentRegistrar = $componentRegistrar;
+        $this->moduleResolver = $moduleResolver;
         $this->directoryList = $directoryList;
         $this->toolRunner = $toolRunner;
     }
@@ -54,6 +54,7 @@ class RunPhpStanCommand extends Command
     {
         $moduleName = (string)$input->getArgument('module');
         try {
+            $modulePath = $this->moduleResolver->getPath($moduleName);
             $level = $this->getLevel((string)$input->getArgument('level'));
             $phpstan = $this->toolRunner->getBinary('phpstan');
         } catch (InvalidArgumentException $invalidArgumentException) {
@@ -62,7 +63,6 @@ class RunPhpStanCommand extends Command
         }
 
         $this->generatePhpStanConfigurationIfMissing();
-        $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
         $this->toolRunner->run(
             '%s analyse --configuration=%s --level=%s --no-progress %s',
             [$phpstan, $this->directoryList->getRoot() . '/phpstan.neon', $level, $modulePath]

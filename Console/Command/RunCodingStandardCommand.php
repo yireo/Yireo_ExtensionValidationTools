@@ -11,25 +11,25 @@
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use InvalidArgumentException;
-use Magento\Framework\Component\ComponentRegistrar;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
+use Yireo\ExtensionValidationTools\Console\ModuleResolver;
 use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunCodingStandardCommand extends Command
 {
-    private ComponentRegistrar $componentRegistrar;
+    private ModuleResolver $moduleResolver;
     private ToolRunner $toolRunner;
 
     public function __construct(
-        ComponentRegistrar $componentRegistrar,
+        ModuleResolver $moduleResolver,
         ToolRunner $toolRunner,
         ?string $name = null
     ) {
         parent::__construct($name);
-        $this->componentRegistrar = $componentRegistrar;
+        $this->moduleResolver = $moduleResolver;
         $this->toolRunner = $toolRunner;
     }
 
@@ -50,6 +50,7 @@ class RunCodingStandardCommand extends Command
     {
         $moduleName = (string)$input->getArgument('module');
         try {
+            $modulePath = $this->moduleResolver->getPath($moduleName);
             $severity = $this->getSeverity((string)$input->getArgument('severity'));
             $phpcs = $this->toolRunner->getBinary('phpcs');
         } catch (InvalidArgumentException $invalidArgumentException) {
@@ -57,7 +58,6 @@ class RunCodingStandardCommand extends Command
             return Command::FAILURE;
         }
 
-        $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
         if (!$this->checkIfMagento2StandardIsInstalled($phpcs)) {
             $this->toolRunner->run(
                 '%s --config-set installed_paths %s',

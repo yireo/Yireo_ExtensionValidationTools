@@ -10,7 +10,9 @@
 
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
-use Magento\Framework\Component\ComponentRegistrar;
+use InvalidArgumentException;
+use Magento\Framework\Exception\FileSystemException;
+use Magento\Framework\Filesystem\Driver\File as FileDriver;
 use Magento\Framework\Filesystem\DriverPool;
 use Magento\Framework\Filesystem\File\WriteFactory;
 use Nette\PhpGenerator\ClassType;
@@ -21,22 +23,26 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use Symfony\Component\Console\Input\InputOption;
+use Yireo\ExtensionValidationTools\Console\ModuleResolver;
 
 class GenerateUnitTestCommand extends Command
 {
     private const TEST_CASE_CLASS = 'PHPUnit\\Framework\\TestCase';
 
-    private ComponentRegistrar $componentRegistrar;
+    private ModuleResolver $moduleResolver;
     private WriteFactory $writeFactory;
+    private FileDriver $fileDriver;
 
     public function __construct(
-        ComponentRegistrar $componentRegistrar,
+        ModuleResolver $moduleResolver,
         WriteFactory $writeFactory,
+        FileDriver $fileDriver,
         ?string $name = null
     ) {
         parent::__construct($name);
-        $this->componentRegistrar = $componentRegistrar;
+        $this->moduleResolver = $moduleResolver;
         $this->writeFactory = $writeFactory;
+        $this->fileDriver = $fileDriver;
     }
 
     protected function configure()
@@ -67,27 +73,68 @@ class GenerateUnitTestCommand extends Command
     protected function execute(Input $input, Output $output): int
     {
         $moduleName = (string)$input->getOption('module');
-        $modulePath = (string)$this->componentRegistrar->getPath('module', $moduleName);
-
         $className = ltrim((string)$input->getOption('class'), '\\');
-        if (!class_exists($className)) {
-            $output->writeln('<error>Class "' . $className . '" does not exist</error>');
+
+        try {
+            $modulePath = $this->moduleResolver->getPath($moduleName);
+            $reflectionClass = $this->getReflectionClass(
+                $className,
+                $this->moduleResolver->getNamespacePrefix($moduleName),
+                $modulePath
+            );
+        } catch (InvalidArgumentException $invalidArgumentException) {
+            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
             return Command::FAILURE;
         }
 
-        $reflectionClass = new ReflectionClass($className);
         $phpUnitTestFile = $this->getPhpUnitTestFile($modulePath, $reflectionClass);
         if (file_exists($phpUnitTestFile)) {
-            $output->writeln('Unit test already exists');
+            $output->writeln('Unit test already exists: ' . $phpUnitTestFile);
             return 0;
         }
 
-        $phpUnitTestCode = $this->getPhpUnitTestCode($reflectionClass);
-        $fileWrite = $this->writeFactory->create($phpUnitTestFile, DriverPool::FILE, 'w');
-        $fileWrite->write($phpUnitTestCode);
+        try {
+            $this->fileDriver->createDirectory(dirname($phpUnitTestFile), 0775);
+            $fileWrite = $this->writeFactory->create($phpUnitTestFile, DriverPool::FILE, 'x');
+            $fileWrite->write($this->getPhpUnitTestCode($reflectionClass));
+            $fileWrite->close();
+        } catch (FileSystemException $fileSystemException) {
+            $output->writeln('<error>' . $fileSystemException->getMessage() . '</error>');
+            return Command::FAILURE;
+        }
 
         $output->writeln('Unit test generated: ' . $phpUnitTestFile);
         return 0;
+    }
+
+    private function getReflectionClass(string $className, string $namespacePrefix, string $modulePath): ReflectionClass
+    {
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*(\\\\[A-Za-z_][A-Za-z0-9_]*)+$/', $className)) {
+            throw new InvalidArgumentException('Invalid class name "' . $className . '"');
+        }
+
+        if (stripos($className, $namespacePrefix) !== 0) {
+            throw new InvalidArgumentException(
+                'Class "' . $className . '" does not belong to namespace "' . $namespacePrefix . '"'
+            );
+        }
+
+        if (!class_exists($className)) {
+            throw new InvalidArgumentException('Class "' . $className . '" does not exist');
+        }
+
+        $reflectionClass = new ReflectionClass($className);
+        $fileName = (string)$reflectionClass->getFileName();
+        $realFileName = $fileName !== '' ? realpath($fileName) : false;
+        if (strpos($reflectionClass->getName(), $namespacePrefix) !== 0
+            || $realFileName === false
+            || strpos($realFileName, $modulePath . '/') !== 0) {
+            throw new InvalidArgumentException(
+                'Class "' . $className . '" is not defined in the module folder "' . $modulePath . '"'
+            );
+        }
+
+        return $reflectionClass;
     }
 
     private function getPhpUnitTestFile(string $modulePath, ReflectionClass $reflectionClass): string
@@ -96,7 +143,7 @@ class GenerateUnitTestCommand extends Command
         array_shift($parts);
         array_shift($parts);
 
-        return $modulePath . '/Test/Unit/' . implode('//', $parts)
+        return $modulePath . '/Test/Unit/' . implode('/', $parts)
             . '/' . $reflectionClass->getShortName() . 'Test.php';
     }
 
@@ -136,7 +183,7 @@ class GenerateUnitTestCommand extends Command
         $parts = explode('\\', $reflectionClass->getNamespaceName());
         $vendor = array_shift($parts);
         $module = array_shift($parts);
-        $namespaceName = implode('\\', array_merge([$vendor, $module, 'Test'], $parts));
+        $namespaceName = implode('\\', array_merge([$vendor, $module, 'Test', 'Unit'], $parts));
         return new PhpNamespace($namespaceName);
     }
 }

@@ -11,25 +11,25 @@
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use InvalidArgumentException;
-use Magento\Framework\Component\ComponentRegistrar;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
+use Yireo\ExtensionValidationTools\Console\ModuleResolver;
 use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunUnitTestCommand extends Command
 {
-    private ComponentRegistrar $componentRegistrar;
+    private ModuleResolver $moduleResolver;
     private ToolRunner $toolRunner;
 
     public function __construct(
-        ComponentRegistrar $componentRegistrar,
+        ModuleResolver $moduleResolver,
         ToolRunner $toolRunner,
         ?string $name = null
     ) {
         parent::__construct($name);
-        $this->componentRegistrar = $componentRegistrar;
+        $this->moduleResolver = $moduleResolver;
         $this->toolRunner = $toolRunner;
     }
 
@@ -48,16 +48,15 @@ class RunUnitTestCommand extends Command
     protected function execute(Input $input, Output $output): int
     {
         $moduleName = (string)$input->getArgument('module');
-        $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
+        try {
+            $modulePath = $this->moduleResolver->getPath($moduleName);
+            $phpunit = $this->toolRunner->getBinary('phpunit');
+        } catch (InvalidArgumentException $invalidArgumentException) {
+            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+            return Command::FAILURE;
+        }
 
         if (is_dir($modulePath . '/Test/Unit')) {
-            try {
-                $phpunit = $this->toolRunner->getBinary('phpunit');
-            } catch (InvalidArgumentException $invalidArgumentException) {
-                $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
-                return Command::FAILURE;
-            }
-
             $this->toolRunner->run(
                 '%s %s --colors=always %s',
                 [PHP_BINARY, $phpunit, $modulePath . '/Test/Unit/']
