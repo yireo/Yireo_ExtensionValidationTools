@@ -10,47 +10,31 @@
 
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
+use InvalidArgumentException;
 use Magento\Framework\Component\ComponentRegistrar;
 use Magento\Framework\Filesystem\DirectoryList;
-use Magento\Framework\Shell;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
+use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunPhpStanCommand extends Command
 {
-    /**
-     * @var ComponentRegistrar
-     */
-    private $componentRegistrar;
+    private ComponentRegistrar $componentRegistrar;
+    private DirectoryList $directoryList;
+    private ToolRunner $toolRunner;
 
-    /**
-     * @var DirectoryList
-     */
-    private $directoryList;
-    
-    /**
-     * @var Shell
-     */
-    private $shell;
-    
-    /**
-     * @param ComponentRegistrar $componentRegistrar
-     * @param DirectoryList $directoryList
-     * @param Shell $shell
-     * @param string|null $name
-     */
     public function __construct(
         ComponentRegistrar $componentRegistrar,
         DirectoryList $directoryList,
-        Shell $shell,
+        ToolRunner $toolRunner,
         ?string $name = null
     ) {
         parent::__construct($name);
         $this->componentRegistrar = $componentRegistrar;
         $this->directoryList = $directoryList;
-        $this->shell = $shell;
+        $this->toolRunner = $toolRunner;
     }
 
     protected function configure()
@@ -58,7 +42,7 @@ class RunPhpStanCommand extends Command
         $this->setName('yireo_extension_validate:phpstan');
         $this->setDescription('Run PHPStan for a specific Magento module');
         $this->addArgument('module', InputArgument::REQUIRED, 'Module name');
-        $this->addArgument('level', InputArgument::OPTIONAL, 'PHPStan level (default 2)', 2);
+        $this->addArgument('level', InputArgument::OPTIONAL, 'PHPStan level (0-10 or max, default 2)', '2');
     }
 
     /**
@@ -68,13 +52,31 @@ class RunPhpStanCommand extends Command
      */
     protected function execute(Input $input, Output $output): int
     {
-        $moduleName = $input->getArgument('module');
-        $level = $input->getArgument('level');
+        $moduleName = (string)$input->getArgument('module');
+        try {
+            $level = $this->getLevel((string)$input->getArgument('level'));
+        } catch (InvalidArgumentException $invalidArgumentException) {
+            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+            return Command::FAILURE;
+        }
 
         $this->generatePhpStanConfigurationIfMissing();
-        $modulePath = $this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
-        $this->shell->execute('vendor/bin/phpstan analyse --configuration=./phpstan.neon --level='.$level.' --no-progress ' . $modulePath);
+        $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
+        $this->toolRunner->run(
+            '%s analyse --configuration=%s --level=%s --no-progress %s',
+            ['vendor/bin/phpstan', './phpstan.neon', $level, $modulePath]
+        );
+
         return 1;
+    }
+
+    private function getLevel(string $level): string
+    {
+        if (!preg_match('/^(10|[0-9]|max)$/', $level)) {
+            throw new InvalidArgumentException('Level should be an integer between 0 and 10, or "max"');
+        }
+
+        return $level;
     }
 
     private function generatePhpStanConfigurationIfMissing()

@@ -10,49 +10,37 @@
 
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
+use InvalidArgumentException;
 use Magento\Framework\Component\ComponentRegistrar;
-use Magento\Framework\Exception\LocalizedException;
-use Magento\Framework\Shell;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
+use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunCodingStandardCommand extends Command
 {
-    /**
-     * @var ComponentRegistrar
-     */
-    private $componentRegistrar;
-    
-    /**
-     * @var Shell
-     */
-    private $shell;
-    
-    /**
-     * @param ComponentRegistrar $componentRegistrar
-     * @param Shell $shell
-     * @param string|null $name
-     */
+    private ComponentRegistrar $componentRegistrar;
+    private ToolRunner $toolRunner;
+
     public function __construct(
         ComponentRegistrar $componentRegistrar,
-        Shell $shell,
+        ToolRunner $toolRunner,
         ?string $name = null
     ) {
         parent::__construct($name);
         $this->componentRegistrar = $componentRegistrar;
-        $this->shell = $shell;
+        $this->toolRunner = $toolRunner;
     }
-    
+
     protected function configure()
     {
         $this->setName('yireo_extension_validate:phpcs');
         $this->setDescription('Run PHPCS for a specific Magento module');
         $this->addArgument('module', InputArgument::REQUIRED, 'Module name');
-        $this->addArgument('severity', InputArgument::OPTIONAL, 'PHPCS severity (default 7)', 7);
+        $this->addArgument('severity', InputArgument::OPTIONAL, 'PHPCS severity (0-10, default 7)', '7');
     }
-    
+
     /**
      * @param Input $input
      * @param Output $output
@@ -60,26 +48,41 @@ class RunCodingStandardCommand extends Command
      */
     protected function execute(Input $input, Output $output): int
     {
-        $moduleName = $input->getArgument('module');
-        $severity = $input->getArgument('severity');
-        $modulePath = $this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
-        $phpcs = 'vendor/bin/phpcs';
-        
-        if (!$this->checkIfMagento2StandardIsInstalled()) {
-            $this->shell->execute($phpcs . ' --config-set installed_paths vendor/magento/magento-coding-standard/');
+        $moduleName = (string)$input->getArgument('module');
+        try {
+            $severity = $this->getSeverity((string)$input->getArgument('severity'));
+        } catch (InvalidArgumentException $invalidArgumentException) {
+            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+            return Command::FAILURE;
         }
-        
-        $this->shell->execute($phpcs . ' --standard=Magento2 --colors --severity=' . $severity . ' ' . $modulePath);
+
+        $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
+        $phpcs = 'vendor/bin/phpcs';
+
+        if (!$this->checkIfMagento2StandardIsInstalled($phpcs)) {
+            $this->toolRunner->run('%s --config-set installed_paths vendor/magento/magento-coding-standard/', [$phpcs]);
+        }
+
+        $this->toolRunner->run(
+            '%s --standard=Magento2 --colors --severity=%s %s',
+            [$phpcs, $severity, $modulePath]
+        );
+
         return 0;
     }
-    
-    /**
-     * @return bool
-     * @throws LocalizedException
-     */
-    private function checkIfMagento2StandardIsInstalled(): bool
+
+    private function getSeverity(string $severity): string
     {
-        $output = $this->shell->execute('vendor/bin/phpcs -i');
+        if (!preg_match('/^(10|[0-9])$/', $severity)) {
+            throw new InvalidArgumentException('Severity should be an integer between 0 and 10');
+        }
+
+        return $severity;
+    }
+
+    private function checkIfMagento2StandardIsInstalled(string $phpcs): bool
+    {
+        $output = $this->toolRunner->run('%s -i', [$phpcs]);
         return (bool)stristr($output, 'Magento2');
     }
 }

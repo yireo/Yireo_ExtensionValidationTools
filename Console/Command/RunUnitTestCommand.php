@@ -11,36 +11,25 @@
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use Magento\Framework\Component\ComponentRegistrar;
-use Magento\Framework\Shell;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
+use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunUnitTestCommand extends Command
 {
-    /**
-     * @var ComponentRegistrar
-     */
-    private $componentRegistrar;
-    
-    /**
-     * @var Shell
-     */
-    private $shell;
-    
-    /**
-     * @param ComponentRegistrar $componentRegistrar
-     * @param string|null $name
-     */
+    private ComponentRegistrar $componentRegistrar;
+    private ToolRunner $toolRunner;
+
     public function __construct(
         ComponentRegistrar $componentRegistrar,
-        Shell $shell,
+        ToolRunner $toolRunner,
         ?string $name = null
     ) {
         parent::__construct($name);
         $this->componentRegistrar = $componentRegistrar;
-        $this->shell = $shell;
+        $this->toolRunner = $toolRunner;
     }
 
     protected function configure()
@@ -57,11 +46,14 @@ class RunUnitTestCommand extends Command
      */
     protected function execute(Input $input, Output $output): int
     {
-        $moduleName = $input->getArgument('module');
-        $modulePath = $this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
+        $moduleName = (string)$input->getArgument('module');
+        $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
 
         if (is_dir($modulePath . '/Test/Unit')) {
-            $this->shell->execute(PHP_BINARY . ' ./vendor/bin/phpunit --colors=always ' . $modulePath . '/Test/Unit/');
+            $this->toolRunner->run(
+                '%s %s --colors=always %s',
+                [PHP_BINARY, './vendor/bin/phpunit', $modulePath . '/Test/Unit/']
+            );
             return 1;
         }
 
