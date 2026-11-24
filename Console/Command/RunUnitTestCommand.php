@@ -16,6 +16,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use Yireo\ExtensionValidationTools\Console\ModuleResolver;
+use Yireo\ExtensionValidationTools\Console\OutputSanitizer;
 use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunUnitTestCommand extends Command
@@ -52,7 +53,7 @@ class RunUnitTestCommand extends Command
             $modulePath = $this->moduleResolver->getPath($moduleName);
             $phpunit = $this->toolRunner->getBinary('phpunit');
         } catch (InvalidArgumentException $invalidArgumentException) {
-            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+            $output->writeln('<error>' . OutputSanitizer::sanitize($invalidArgumentException->getMessage()) . '</error>');
             return Command::FAILURE;
         }
 

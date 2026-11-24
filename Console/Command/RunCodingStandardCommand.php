@@ -16,6 +16,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use Yireo\ExtensionValidationTools\Console\ModuleResolver;
+use Yireo\ExtensionValidationTools\Console\OutputSanitizer;
 use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunCodingStandardCommand extends Command
@@ -54,7 +55,7 @@ class RunCodingStandardCommand extends Command
             $severity = $this->getSeverity((string)$input->getArgument('severity'));
             $phpcs = $this->toolRunner->getBinary('phpcs');
         } catch (InvalidArgumentException $invalidArgumentException) {
-            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+            $output->writeln('<error>' . OutputSanitizer::sanitize($invalidArgumentException->getMessage()) . '</error>');
             return Command::FAILURE;
         }
 

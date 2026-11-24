@@ -17,6 +17,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use Yireo\ExtensionValidationTools\Console\ModuleResolver;
+use Yireo\ExtensionValidationTools\Console\OutputSanitizer;
 use Yireo\ExtensionValidationTools\Console\ToolRunner;
 
 class RunPhpStanCommand extends Command
@@ -58,7 +59,7 @@ class RunPhpStanCommand extends Command
             $level = $this->getLevel((string)$input->getArgument('level'));
             $phpstan = $this->toolRunner->getBinary('phpstan');
         } catch (InvalidArgumentException $invalidArgumentException) {
-            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+            $output->writeln('<error>' . OutputSanitizer::sanitize($invalidArgumentException->getMessage()) . '</error>');
             return Command::FAILURE;
         }
 

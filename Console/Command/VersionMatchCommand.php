@@ -18,6 +18,7 @@ use Symfony\Component\Console\Output\OutputInterface as Output;
 use Symfony\Component\Console\Input\InputOption;
 use Yireo\ExtensionChecker\Composer\ComposerFileFactory;
 use Yireo\ExtensionChecker\Composer\ComposerProvider;
+use Yireo\ExtensionValidationTools\Console\OutputSanitizer;
 
 class VersionMatchCommand extends Command
 {
@@ -66,7 +67,7 @@ class VersionMatchCommand extends Command
         try {
             $composerRequirements = $this->composerFileFactory->create($composerFile)->get('require');
         } catch (Exception $e) {
-            $output->writeln('ERROR: ' . $e->getMessage());
+            $output->writeln('ERROR: ' . OutputSanitizer::sanitize($e->getMessage()));
             return 1;
         }
 
@@ -84,7 +85,7 @@ class VersionMatchCommand extends Command
             }
 
             if ($matchedInProject === false) {
-                $output->writeln('ERROR: "' . $composerRequirement . '" is not found in project');
+                $output->writeln('ERROR: "' . OutputSanitizer::sanitize($composerRequirement) . '" is not found in project');
                 continue;
             }
 
@@ -102,9 +103,9 @@ class VersionMatchCommand extends Command
             $output->writeln(
                 sprintf(
                     'ERROR: "%s:%s" does not match required version "%s"',
-                    $composerRequirement,
-                    $installedVersion,
-                    $composerRequiredVersion
+                    OutputSanitizer::sanitize($composerRequirement),
+                    OutputSanitizer::sanitize($installedVersion),
+                    OutputSanitizer::sanitize($composerRequiredVersion)
                 )
             );
         }

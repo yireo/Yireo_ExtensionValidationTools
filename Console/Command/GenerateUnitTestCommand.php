@@ -24,6 +24,7 @@ use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
 use Symfony\Component\Console\Input\InputOption;
 use Yireo\ExtensionValidationTools\Console\ModuleResolver;
+use Yireo\ExtensionValidationTools\Console\OutputSanitizer;
 
 class GenerateUnitTestCommand extends Command
 {
@@ -83,13 +84,13 @@ class GenerateUnitTestCommand extends Command
                 $modulePath
             );
         } catch (InvalidArgumentException $invalidArgumentException) {
-            $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+            $output->writeln('<error>' . OutputSanitizer::sanitize($invalidArgumentException->getMessage()) . '</error>');
             return Command::FAILURE;
         }
 
         $phpUnitTestFile = $this->getPhpUnitTestFile($modulePath, $reflectionClass);
         if (file_exists($phpUnitTestFile)) {
-            $output->writeln('Unit test already exists: ' . $phpUnitTestFile);
+            $output->writeln('Unit test already exists: ' . OutputSanitizer::sanitize($phpUnitTestFile));
             return 0;
         }
 
@@ -99,11 +100,11 @@ class GenerateUnitTestCommand extends Command
             $fileWrite->write($this->getPhpUnitTestCode($reflectionClass));
             $fileWrite->close();
         } catch (FileSystemException $fileSystemException) {
-            $output->writeln('<error>' . $fileSystemException->getMessage() . '</error>');
+            $output->writeln('<error>' . OutputSanitizer::sanitize($fileSystemException->getMessage()) . '</error>');
             return Command::FAILURE;
         }
 
-        $output->writeln('Unit test generated: ' . $phpUnitTestFile);
+        $output->writeln('Unit test generated: ' . OutputSanitizer::sanitize($phpUnitTestFile));
         return 0;
     }
 
