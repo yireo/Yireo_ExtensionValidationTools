@@ -64,7 +64,12 @@ class VersionMatchCommand extends Command
      */
     protected function execute(Input $input, Output $output): int
     {
-        $composerFile = (string)$input->getArgument('composer_file');
+        $composerFile = realpath((string)$input->getArgument('composer_file'));
+        if ($composerFile === false || !is_file($composerFile) || basename($composerFile) !== 'composer.json') {
+            $output->writeln('ERROR: The argument should be an existing composer.json file');
+            return Command::FAILURE;
+        }
+
         try {
             $composerRequirements = $this->composerFileFactory->create($composerFile)->get('require');
         } catch (Exception $e) {
