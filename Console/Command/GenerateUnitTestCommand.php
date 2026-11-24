@@ -13,11 +13,10 @@ namespace Yireo\ExtensionValidationTools\Console\Command;
 use Magento\Framework\Component\ComponentRegistrar;
 use Magento\Framework\Filesystem\DriverPool;
 use Magento\Framework\Filesystem\File\WriteFactory;
-use Magento\Framework\ObjectManagerInterface;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\PhpNamespace;
 use ReflectionClass;
-use ReflectionException;
+use ReflectionMethod;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
@@ -27,35 +26,15 @@ class GenerateUnitTestCommand extends Command
 {
     private const TEST_CASE_CLASS = 'PHPUnit\\Framework\\TestCase';
 
-    /**
-     * @var ObjectManagerInterface
-     */
-    private $objectManager;
+    private ComponentRegistrar $componentRegistrar;
+    private WriteFactory $writeFactory;
 
-    /**
-     * @var ComponentRegistrar
-     */
-    private $componentRegistrar;
-    /**
-     * @var WriteFactory
-     */
-    private $writeFactory;
-
-    /**
-     * GenerateUnitTestCommand constructor.
-     * @param ObjectManagerInterface $objectManager
-     * @param ComponentRegistrar $componentRegistrar
-     * @param WriteFactory $writeFactory
-     * @param string|null $name
-     */
     public function __construct(
-        ObjectManagerInterface $objectManager,
         ComponentRegistrar $componentRegistrar,
         WriteFactory $writeFactory,
         ?string $name = null
     ) {
         parent::__construct($name);
-        $this->objectManager = $objectManager;
         $this->componentRegistrar = $componentRegistrar;
         $this->writeFactory = $writeFactory;
     }
@@ -69,13 +48,15 @@ class GenerateUnitTestCommand extends Command
             'module',
             null,
             InputOption::VALUE_REQUIRED,
-            'Module name');
+            'Module name'
+        );
 
         $this->addOption(
             'class',
             null,
             InputOption::VALUE_REQUIRED,
-            'Full qualified class name');
+            'Full qualified class name'
+        );
     }
 
     /**
@@ -85,21 +66,23 @@ class GenerateUnitTestCommand extends Command
      */
     protected function execute(Input $input, Output $output): int
     {
-        $moduleName = $input->getOption('module');
-        $modulePath = $this->componentRegistrar->getPath('module', $moduleName);
+        $moduleName = (string)$input->getOption('module');
+        $modulePath = (string)$this->componentRegistrar->getPath('module', $moduleName);
 
-        $className = $input->getOption('class');
-        if (!$targetObject = $this->objectManager->get($className)) {
+        $className = ltrim((string)$input->getOption('class'), '\\');
+        if (!class_exists($className)) {
             $output->writeln('<error>Class "' . $className . '" does not exist</error>');
+            return Command::FAILURE;
         }
 
-        $phpUnitTestFile = $this->getPhpUnitTestFile($modulePath, $targetObject);
+        $reflectionClass = new ReflectionClass($className);
+        $phpUnitTestFile = $this->getPhpUnitTestFile($modulePath, $reflectionClass);
         if (file_exists($phpUnitTestFile)) {
             $output->writeln('Unit test already exists');
             return 0;
         }
 
-        $phpUnitTestCode = $this->getPhpUnitTestCode($targetObject);
+        $phpUnitTestCode = $this->getPhpUnitTestCode($reflectionClass);
         $fileWrite = $this->writeFactory->create($phpUnitTestFile, DriverPool::FILE, 'w');
         $fileWrite->write($phpUnitTestCode);
 
@@ -107,79 +90,50 @@ class GenerateUnitTestCommand extends Command
         return 0;
     }
 
-    /**
-     * @param string $modulePath
-     * @param object $targetObject
-     * @return string
-     * @throws ReflectionException
-     */
-    private function getPhpUnitTestFile(string $modulePath, object $targetObject): string
+    private function getPhpUnitTestFile(string $modulePath, ReflectionClass $reflectionClass): string
     {
-        $reflectionObject = new ReflectionClass($targetObject);
-        $namespaceName = $reflectionObject->getNamespaceName();
-        $parts = explode('\\', $namespaceName);
+        $parts = explode('\\', $reflectionClass->getNamespaceName());
         array_shift($parts);
         array_shift($parts);
 
-        return $modulePath . '/Test/Unit/' . implode('//',
-                $parts) . '/' . $reflectionObject->getShortName() . 'Test.php';
+        return $modulePath . '/Test/Unit/' . implode('//', $parts)
+            . '/' . $reflectionClass->getShortName() . 'Test.php';
     }
 
-    /**
-     * @param object $targetObject
-     * @return string
-     */
-    private function getPhpUnitTestCode(object $targetObject): string
+    private function getPhpUnitTestCode(ReflectionClass $reflectionClass): string
     {
-        $phpCode = '';
-        $reflectionObject = new ReflectionClass($targetObject);
-        $targetClass = get_class($targetObject);
-        $targetMethods = get_class_methods($targetObject);
+        $targetClass = $reflectionClass->getName();
+        $targetObjectName = $reflectionClass->getShortName();
+        $targetObjectVar = '$' . lcfirst($targetObjectName);
 
-        $namespace = $this->getTestNameSpace($targetObject);
-        $className = $reflectionObject->getShortName() . 'Test';
-
-        $class = new ClassType($className);
+        $class = new ClassType($targetObjectName . 'Test');
         $class->setExtends(self::TEST_CASE_CLASS);
 
-        foreach ($targetMethods as $targetMethod) {
-            if ($targetMethod === '__construct') {
+        foreach ($reflectionClass->getMethods(ReflectionMethod::IS_PUBLIC) as $targetMethod) {
+            if ($targetMethod->isConstructor() || $targetMethod->getDeclaringClass()->getName() !== $targetClass) {
                 continue;
             }
 
-            $targetObjectName = $reflectionObject->getShortName();
-            $targetObjectVar = '$'.lcfirst($targetObjectName);
-
             $bodyLines = [];
             $bodyLines[] = $targetObjectVar . ' = new ' . $targetObjectName . '();';
-            $bodyLines[] = $targetObjectVar . '->'.$targetMethod.'();';
+            $bodyLines[] = $targetObjectVar . '->' . $targetMethod->getName() . '();';
 
-
-            $class->addMethod('test' . ucfirst($targetMethod))
-                ->addComment('Test for ' . $targetClass . '::' . $targetMethod)
+            $class->addMethod('test' . ucfirst($targetMethod->getName()))
+                ->addComment('Test for ' . $targetClass . '::' . $targetMethod->getName())
                 ->setBody(implode("\n", $bodyLines));
         }
 
+        $namespace = $this->getTestNameSpace($reflectionClass);
         $namespace->addUse(self::TEST_CASE_CLASS);
         $namespace->addUse($targetClass);
         $namespace->add($class);
 
-        $phpCode .= "<?php declare(strict_types=1);\n\n";
-        $phpCode .= $namespace;
-
-        return $phpCode;
+        return "<?php declare(strict_types=1);\n\n" . $namespace;
     }
 
-    /**
-     * @param object $targetObject
-     * @return PhpNamespace
-     * @throws ReflectionException
-     */
-    private function getTestNameSpace(object $targetObject): PhpNamespace
+    private function getTestNameSpace(ReflectionClass $reflectionClass): PhpNamespace
     {
-        $reflectionObject = new ReflectionClass($targetObject);
-        $namespaceName = $reflectionObject->getNamespaceName();
-        $parts = explode('\\', $namespaceName);
+        $parts = explode('\\', $reflectionClass->getNamespaceName());
         $vendor = array_shift($parts);
         $module = array_shift($parts);
         $namespaceName = implode('\\', array_merge([$vendor, $module, 'Test'], $parts));
