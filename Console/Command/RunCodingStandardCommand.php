@@ -61,20 +61,23 @@ class RunCodingStandardCommand extends Command
         }
 
         try {
-            if (!$this->checkIfMagento2StandardIsInstalled($phpcs)) {
-                $this->toolRunner->run(
-                    '%s --config-set installed_paths %s',
-                    [$phpcs, $this->toolRunner->getRootPath('vendor/magento/magento-coding-standard/')]
-                );
-            }
+            $isStandardInstalled = $this->checkIfMagento2StandardIsInstalled($phpcs);
         } catch (LocalizedException $localizedException) {
             $output->writeln('<error>' . OutputSanitizer::sanitize($localizedException->getMessage()) . '</error>');
             return Command::FAILURE;
         }
 
+        if ($isStandardInstalled) {
+            return $this->toolRunner->execute(
+                '%s --standard=Magento2 --colors --severity=%s %s',
+                [$phpcs, $severity, $modulePath],
+                $output
+            );
+        }
+
         return $this->toolRunner->execute(
-            '%s --standard=Magento2 --colors --severity=%s %s',
-            [$phpcs, $severity, $modulePath],
+            '%s --runtime-set installed_paths %s --standard=Magento2 --colors --severity=%s %s',
+            [$phpcs, $this->toolRunner->getRootPath('vendor/magento/magento-coding-standard'), $severity, $modulePath],
             $output
         );
     }

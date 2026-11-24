@@ -11,7 +11,6 @@
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use InvalidArgumentException;
-use Magento\Framework\Filesystem\DirectoryList;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
@@ -23,18 +22,15 @@ use Yireo\ExtensionValidationTools\Console\ToolRunner;
 class RunPhpStanCommand extends Command
 {
     private ModuleResolver $moduleResolver;
-    private DirectoryList $directoryList;
     private ToolRunner $toolRunner;
 
     public function __construct(
         ModuleResolver $moduleResolver,
-        DirectoryList $directoryList,
         ToolRunner $toolRunner,
         ?string $name = null
     ) {
         parent::__construct($name);
         $this->moduleResolver = $moduleResolver;
-        $this->directoryList = $directoryList;
         $this->toolRunner = $toolRunner;
     }
 
@@ -63,10 +59,9 @@ class RunPhpStanCommand extends Command
             return Command::FAILURE;
         }
 
-        $this->generatePhpStanConfigurationIfMissing();
         return $this->toolRunner->execute(
             '%s analyse --configuration=%s --level=%s --no-progress %s',
-            [$phpstan, $this->directoryList->getRoot() . '/phpstan.neon', $level, $modulePath],
+            [$phpstan, $this->getConfigurationFile(), $level, $modulePath],
             $output
         );
     }
@@ -80,19 +75,13 @@ class RunPhpStanCommand extends Command
         return $level;
     }
 
-    private function generatePhpStanConfigurationIfMissing()
+    private function getConfigurationFile(): string
     {
-        $configFile = $this->directoryList->getRoot().'/phpstan.neon';
-        if (file_exists($configFile)) {
-            return;
+        $configFile = $this->toolRunner->getRootPath('phpstan.neon');
+        if (is_file($configFile)) {
+            return $configFile;
         }
 
-        file_put_contents($configFile, <<<HEREDOC
-parameters:
-    excludes_analyse:
-        - */Test/*/*
-
-HEREDOC
-        );
+        return dirname(__DIR__, 2) . '/etc/phpstan/default.neon';
     }
 }
