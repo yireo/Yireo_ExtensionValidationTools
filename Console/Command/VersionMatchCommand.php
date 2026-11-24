@@ -12,10 +12,11 @@ namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use Composer\Semver\VersionParser;
 use Exception;
+use UnexpectedValueException;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
 use Symfony\Component\Console\Output\OutputInterface as Output;
-use Symfony\Component\Console\Input\InputOption;
 use Yireo\ExtensionChecker\Composer\ComposerFileFactory;
 use Yireo\ExtensionChecker\Composer\ComposerProvider;
 use Yireo\ExtensionValidationTools\Console\OutputSanitizer;
@@ -51,7 +52,7 @@ class VersionMatchCommand extends Command
 
         $this->addArgument(
             'composer_file',
-            InputOption::VALUE_REQUIRED,
+            InputArgument::REQUIRED,
             'Module composer.json file'
         );
     }
@@ -68,48 +69,76 @@ class VersionMatchCommand extends Command
             $composerRequirements = $this->composerFileFactory->create($composerFile)->get('require');
         } catch (Exception $e) {
             $output->writeln('ERROR: ' . OutputSanitizer::sanitize($e->getMessage()));
-            return 1;
+            return Command::FAILURE;
+        }
+
+        if (!is_array($composerRequirements)) {
+            $output->writeln('ERROR: The "require" section is not a list of packages');
+            return Command::FAILURE;
         }
 
         $installedPackages = $this->composerProvider->getComposerPackages();
+        $hasErrors = false;
         foreach ($composerRequirements as $composerRequirement => $composerRequiredVersion) {
-            if (preg_match('/^ext-/', $composerRequirement) || $composerRequirement === 'php') {
-                continue;
+            $error = $this->checkRequirement($composerRequirement, $composerRequiredVersion, $installedPackages);
+            if ($error !== '') {
+                $output->writeln('ERROR: ' . $error);
+                $hasErrors = true;
             }
+        }
 
-            $matchedInProject = false;
-            foreach ($installedPackages as $installedPackage) {
-                if ($installedPackage['name'] === $composerRequirement) {
-                    $matchedInProject = $installedPackage;
-                }
+        return $hasErrors ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    /**
+     * @param mixed $composerRequirement
+     * @param mixed $composerRequiredVersion
+     * @param array $installedPackages
+     * @return string Sanitized error message, or an empty string when the requirement is met
+     */
+    private function checkRequirement($composerRequirement, $composerRequiredVersion, array $installedPackages): string
+    {
+        if (!is_string($composerRequirement) || !is_string($composerRequiredVersion)) {
+            return 'Invalid requirement "' . OutputSanitizer::sanitize($composerRequirement) . '"';
+        }
+
+        if (preg_match('/^ext-/', $composerRequirement) || $composerRequirement === 'php') {
+            return '';
+        }
+
+        $matchedInProject = false;
+        foreach ($installedPackages as $installedPackage) {
+            if ($installedPackage['name'] === $composerRequirement) {
+                $matchedInProject = $installedPackage;
             }
+        }
 
-            if ($matchedInProject === false) {
-                $output->writeln('ERROR: "' . OutputSanitizer::sanitize($composerRequirement) . '" is not found in project');
-                continue;
-            }
+        if ($matchedInProject === false) {
+            return '"' . OutputSanitizer::sanitize($composerRequirement) . '" is not found in project';
+        }
 
-            $installedVersion = $matchedInProject['version'];
-            if ($installedVersion === $composerRequiredVersion) {
-                continue;
-            }
+        $installedVersion = (string)$matchedInProject['version'];
+        if ($installedVersion === $composerRequiredVersion) {
+            return '';
+        }
 
+        try {
             $composerConstraint = (new VersionParser)->parseConstraints($composerRequiredVersion);
             $projectConstraint = (new VersionParser)->parseConstraints($installedVersion);
-            if ($composerConstraint->matches($projectConstraint)) {
-                continue;
-            }
-
-            $output->writeln(
-                sprintf(
-                    'ERROR: "%s:%s" does not match required version "%s"',
-                    OutputSanitizer::sanitize($composerRequirement),
-                    OutputSanitizer::sanitize($installedVersion),
-                    OutputSanitizer::sanitize($composerRequiredVersion)
-                )
-            );
+        } catch (UnexpectedValueException $unexpectedValueException) {
+            return 'Invalid version constraint for "' . OutputSanitizer::sanitize($composerRequirement) . '": '
+                . OutputSanitizer::sanitize($unexpectedValueException->getMessage());
         }
-        
-        return 1;
+
+        if ($composerConstraint->matches($projectConstraint)) {
+            return '';
+        }
+
+        return sprintf(
+            '"%s:%s" does not match required version "%s"',
+            OutputSanitizer::sanitize($composerRequirement),
+            OutputSanitizer::sanitize($installedVersion),
+            OutputSanitizer::sanitize($composerRequiredVersion)
+        );
     }
 }

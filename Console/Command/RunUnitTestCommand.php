@@ -57,14 +57,15 @@ class RunUnitTestCommand extends Command
             return Command::FAILURE;
         }
 
-        if (is_dir($modulePath . '/Test/Unit')) {
-            $this->toolRunner->run(
-                '%s %s --colors=always %s',
-                [PHP_BINARY, $phpunit, $modulePath . '/Test/Unit/']
-            );
-            return 1;
+        if (!is_dir($modulePath . '/Test/Unit')) {
+            $output->writeln('No unit tests found');
+            return Command::SUCCESS;
         }
 
-        return 0;
+        return $this->toolRunner->execute(
+            '%s %s --colors=always %s',
+            [PHP_BINARY, $phpunit, $modulePath . '/Test/Unit/'],
+            $output
+        );
     }
 }

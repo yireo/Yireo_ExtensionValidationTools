@@ -11,6 +11,7 @@
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
 use InvalidArgumentException;
+use Magento\Framework\Exception\LocalizedException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface as Input;
@@ -59,19 +60,23 @@ class RunCodingStandardCommand extends Command
             return Command::FAILURE;
         }
 
-        if (!$this->checkIfMagento2StandardIsInstalled($phpcs)) {
-            $this->toolRunner->run(
-                '%s --config-set installed_paths %s',
-                [$phpcs, $this->toolRunner->getRootPath('vendor/magento/magento-coding-standard/')]
-            );
+        try {
+            if (!$this->checkIfMagento2StandardIsInstalled($phpcs)) {
+                $this->toolRunner->run(
+                    '%s --config-set installed_paths %s',
+                    [$phpcs, $this->toolRunner->getRootPath('vendor/magento/magento-coding-standard/')]
+                );
+            }
+        } catch (LocalizedException $localizedException) {
+            $output->writeln('<error>' . OutputSanitizer::sanitize($localizedException->getMessage()) . '</error>');
+            return Command::FAILURE;
         }
 
-        $this->toolRunner->run(
+        return $this->toolRunner->execute(
             '%s --standard=Magento2 --colors --severity=%s %s',
-            [$phpcs, $severity, $modulePath]
+            [$phpcs, $severity, $modulePath],
+            $output
         );
-
-        return 0;
     }
 
     private function getSeverity(string $severity): string
@@ -83,6 +88,11 @@ class RunCodingStandardCommand extends Command
         return $severity;
     }
 
+    /**
+     * @param string $phpcs
+     * @return bool
+     * @throws LocalizedException
+     */
     private function checkIfMagento2StandardIsInstalled(string $phpcs): bool
     {
         $output = $this->toolRunner->run('%s -i', [$phpcs]);

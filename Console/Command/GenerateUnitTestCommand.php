@@ -91,7 +91,7 @@ class GenerateUnitTestCommand extends Command
         $phpUnitTestFile = $this->getPhpUnitTestFile($modulePath, $reflectionClass);
         if (file_exists($phpUnitTestFile)) {
             $output->writeln('Unit test already exists: ' . OutputSanitizer::sanitize($phpUnitTestFile));
-            return 0;
+            return Command::SUCCESS;
         }
 
         try {
@@ -105,7 +105,7 @@ class GenerateUnitTestCommand extends Command
         }
 
         $output->writeln('Unit test generated: ' . OutputSanitizer::sanitize($phpUnitTestFile));
-        return 0;
+        return Command::SUCCESS;
     }
 
     private function getReflectionClass(string $className, string $namespacePrefix, string $modulePath): ReflectionClass

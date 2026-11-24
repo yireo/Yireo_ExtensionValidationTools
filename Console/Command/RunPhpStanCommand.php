@@ -64,12 +64,11 @@ class RunPhpStanCommand extends Command
         }
 
         $this->generatePhpStanConfigurationIfMissing();
-        $this->toolRunner->run(
+        return $this->toolRunner->execute(
             '%s analyse --configuration=%s --level=%s --no-progress %s',
-            [$phpstan, $this->directoryList->getRoot() . '/phpstan.neon', $level, $modulePath]
+            [$phpstan, $this->directoryList->getRoot() . '/phpstan.neon', $level, $modulePath],
+            $output
         );
-
-        return 1;
     }
 
     private function getLevel(string $level): string
