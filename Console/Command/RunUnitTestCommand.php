@@ -10,6 +10,7 @@
 
 namespace Yireo\ExtensionValidationTools\Console\Command;
 
+use InvalidArgumentException;
 use Magento\Framework\Component\ComponentRegistrar;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -50,9 +51,16 @@ class RunUnitTestCommand extends Command
         $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
 
         if (is_dir($modulePath . '/Test/Unit')) {
+            try {
+                $phpunit = $this->toolRunner->getBinary('phpunit');
+            } catch (InvalidArgumentException $invalidArgumentException) {
+                $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
+                return Command::FAILURE;
+            }
+
             $this->toolRunner->run(
                 '%s %s --colors=always %s',
-                [PHP_BINARY, './vendor/bin/phpunit', $modulePath . '/Test/Unit/']
+                [PHP_BINARY, $phpunit, $modulePath . '/Test/Unit/']
             );
             return 1;
         }

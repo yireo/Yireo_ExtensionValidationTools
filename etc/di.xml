@@ -12,7 +12,7 @@
         </arguments>
     </type>
 
-    <type name="Yireo\ExtensionValidationTools\Console\Command\RunPhpStanCommand">
+    <type name="Yireo\ExtensionValidationTools\Console\ToolRunner">
         <arguments>
             <argument name="directoryList" xsi:type="object">\Magento\Framework\Filesystem\DirectoryList\Proxy</argument>
         </arguments>

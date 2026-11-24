@@ -51,16 +51,18 @@ class RunCodingStandardCommand extends Command
         $moduleName = (string)$input->getArgument('module');
         try {
             $severity = $this->getSeverity((string)$input->getArgument('severity'));
+            $phpcs = $this->toolRunner->getBinary('phpcs');
         } catch (InvalidArgumentException $invalidArgumentException) {
             $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
             return Command::FAILURE;
         }
 
         $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
-        $phpcs = 'vendor/bin/phpcs';
-
         if (!$this->checkIfMagento2StandardIsInstalled($phpcs)) {
-            $this->toolRunner->run('%s --config-set installed_paths vendor/magento/magento-coding-standard/', [$phpcs]);
+            $this->toolRunner->run(
+                '%s --config-set installed_paths %s',
+                [$phpcs, $this->toolRunner->getRootPath('vendor/magento/magento-coding-standard/')]
+            );
         }
 
         $this->toolRunner->run(

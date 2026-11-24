@@ -55,6 +55,7 @@ class RunPhpStanCommand extends Command
         $moduleName = (string)$input->getArgument('module');
         try {
             $level = $this->getLevel((string)$input->getArgument('level'));
+            $phpstan = $this->toolRunner->getBinary('phpstan');
         } catch (InvalidArgumentException $invalidArgumentException) {
             $output->writeln('<error>' . $invalidArgumentException->getMessage() . '</error>');
             return Command::FAILURE;
@@ -64,7 +65,7 @@ class RunPhpStanCommand extends Command
         $modulePath = (string)$this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $moduleName);
         $this->toolRunner->run(
             '%s analyse --configuration=%s --level=%s --no-progress %s',
-            ['vendor/bin/phpstan', './phpstan.neon', $level, $modulePath]
+            [$phpstan, $this->directoryList->getRoot() . '/phpstan.neon', $level, $modulePath]
         );
 
         return 1;
