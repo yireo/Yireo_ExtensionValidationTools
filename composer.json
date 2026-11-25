@@ -1,27 +1,25 @@
 {
-  "name": "yireo/magento2-extension-validation-tools",
-  "version": "0.0.2",
-  "description": "N/A",
-  "type": "magento2-module",
-  "require": {
-    "ext-pcre": "*",
-    "composer/semver": "^3.0",
-    "magento/framework": "^103.0",
-    "nette/php-generator": "^3.6 || ^4.0",
-    "yireo/magento2-extensionchecker": "^2.0"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0"
-  },
-  "license": [
-    "OSL-3.0"
-  ],
-  "autoload": {
-    "files": [
-      "registration.php"
-    ],
-    "psr-4": {
-      "Yireo\\ExtensionValidationTools\\": ""
+    "name": "yireo/magento2-extension-validation-tools",
+    "version": "0.0.2",
+    "description": "N/A",
+    "type": "magento2-module",
+    "require": {
+        "composer/semver": "^3.0",
+        "ext-pcre": "*",
+        "magento/framework": "^103.0",
+        "nette/php-generator": "^3.6 || ^4.0",
+        "yireo/magento2-extensionchecker": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0"
+    },
+    "license": "OSL-3.0",
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "Yireo\\ExtensionValidationTools\\": ""
+        }
     }
-  }
 }
